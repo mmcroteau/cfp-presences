@@ -1,0 +1,149 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Prise de présence</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    label, select, input { margin: 5px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #f2f2f2; }
+    .minutes-input { width: 60px; }
+  </style>
+</head>
+<body>
+  <h2>Feuille de présence</h2>
+
+  <label for="cohorte">Cohorte :</label>
+  <select id="cohorte" onchange="loadEleves()">
+    <option value="">-- Choisir une cohorte --</option>
+    <option value="SASI">SASI</option>
+    <option value="Électricité">Électricité</option>
+    <option value="Coiffure">Coiffure</option>
+    <option value="Comptabilité">Comptabilité</option>
+    <option value="Secrétariat">Secrétariat</option>
+    <option value="Cuisine">Cuisine</option>
+  </select>
+
+  <label for="date">Date :</label>
+  <input type="date" id="date" />
+
+  <table id="presenceTable">
+    <thead>
+      <tr>
+        <th>Nom de l'élève</th>
+        <th>Période</th>
+        <th>Statut</th>
+        <th>Minutes d'absence</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody">
+      <!-- Lignes générées dynamiquement -->
+    </tbody>
+  </table>
+
+  <button onclick="enregistrerPresences()">Enregistrer les présences</button>
+
+  <script>
+    const elevesParCohorte = {
+      "SASI": ["Alice Tremblay", "Marc Gagnon"],
+      "Électricité": ["Jean Fortin", "Lucie Moreau"],
+      "Coiffure": ["Sophie Lavoie", "Émile Roy"],
+      "Comptabilité": ["Nadia Bouchard", "Olivier Martel"],
+      "Secrétariat": ["Julie Simard", "Antoine Lefebvre"],
+      "Cuisine": ["Camille Pelletier", "David Gagné"]
+    };
+
+    const periodesParCohorte = {
+      "SASI": 6,
+      "Électricité": 7,
+      "Coiffure": 6,
+      "Comptabilité": 6,
+      "Secrétariat": 6,
+      "Cuisine": 6
+    };
+
+    const statuts = [
+      "Présent",
+      "Libération",
+      "Absence motivée",
+      "Absence non motivée",
+      "Retard",
+      "Départ hâtif",
+      "Rencontre SEC"
+    ];
+
+    function loadEleves() {
+      const cohorte = document.getElementById("cohorte").value;
+      const eleves = elevesParCohorte[cohorte] || [];
+      const nbPeriodes = periodesParCohorte[cohorte] || 6;
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = "";
+
+      eleves.forEach(nom => {
+        for (let p = 1; p <= nbPeriodes; p++) {
+          const row = document.createElement("tr");
+
+          const tdNom = document.createElement("td");
+          tdNom.textContent = nom;
+          row.appendChild(tdNom);
+
+          const tdPeriode = document.createElement("td");
+          tdPeriode.textContent = p;
+          row.appendChild(tdPeriode);
+
+          const tdStatut = document.createElement("td");
+          const select = document.createElement("select");
+          statuts.forEach(s => {
+            const option = document.createElement("option");
+            option.value = s;
+            option.textContent = s;
+            select.appendChild(option);
+          });
+          tdStatut.appendChild(select);
+          row.appendChild(tdStatut);
+
+          const tdMinutes = document.createElement("td");
+          const input = document.createElement("input");
+          input.type = "number";
+          input.className = "minutes-input";
+          input.min = 0;
+          tdMinutes.appendChild(input);
+          row.appendChild(tdMinutes);
+
+          tbody.appendChild(row);
+        }
+      });
+    }
+
+    function enregistrerPresences() {
+      const date = document.getElementById("date").value;
+      const cohorte = document.getElementById("cohorte").value;
+      const rows = document.querySelectorAll("#tableBody tr");
+      const data = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        const cells = rows[i].children;
+        const nom = cells[0].textContent;
+        const periode = cells[1].textContent;
+        const statut = cells[2].querySelector("select").value;
+        const minutes = cells[3].querySelector("input").value;
+
+        data.push({
+          Nom: nom,
+          Cohorte: cohorte,
+          Date: date,
+          Période: periode,
+          Statut: statut,
+          Minutes: minutes
+        });
+      }
+
+      console.log("Données à enregistrer :", data);
+      alert("Les présences ont été enregistrées (simulation).");
+    }
+  </script>
+</body>
+</html>
