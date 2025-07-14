@@ -1,0 +1,110 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Feuille de présence</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+        th { background-color: #f2f2f2; }
+        button { margin-top: 20px; padding: 10px 20px; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <h2>Feuille de présence - FP/FGA</h2>
+    <table id="attendanceTable">
+        <thead>
+            <tr>
+                <th>Nom</th>
+                <th>Prénom</th>
+                <th>No fiche</th>
+                <th>Cohorte</th>
+                <th>Date</th>
+                <th>Période</th>
+                <th>Statut présence</th>
+                <th>Minutes d'absence</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Exemple avec 3 élèves et 2 périodes -->
+            <script>
+                const students = [
+                    { nom: "Tremblay", prenom: "Julie", fiche: "123456", cohorte: "2024-A" },
+                    { nom: "Gagnon", prenom: "Marc", fiche: "234567", cohorte: "2024-A" },
+                    { nom: "Roy", prenom: "Sophie", fiche: "345678", cohorte: "2024-A" }
+                ];
+                const periods = ["1", "2"];
+                const today = new Date().toISOString().split('T')[0];
+                const tbody = document.currentScript.parentElement;
+
+                students.forEach(student => {
+                    periods.forEach(period => {
+                        const row = document.createElement("tr");
+                        row.innerHTML = `
+                            <td>${student.nom}</td>
+                            <td>${student.prenom}</td>
+                            <td>${student.fiche}</td>
+                            <td>${student.cohorte}</td>
+                            <td><input type="date" value="${today}"></td>
+                            <td>${period}</td>
+                            <td>
+                                <select>
+                                    <option value="Présent">Présent</option>
+                                    <option value="Absent">Absent</option>
+                                    <option value="Retard">Retard</option>
+                                </select>
+                            </td>
+                            <td><input type="number" min="0" max="60" value="0"></td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                });
+            </script>
+        </tbody>
+    </table>
+
+    <button onclick="submitData()">Enregistrer les présences</button>
+
+    <script>
+        function submitData() {
+            const rows = document.querySelectorAll("#attendanceTable tbody tr");
+            const data = [];
+
+            rows.forEach(row => {
+                const cells = row.querySelectorAll("td");
+                data.push({
+                    Nom: cells[0].innerText,
+                    Prénom: cells[1].innerText,
+                    NoFiche: cells[2].innerText,
+                    Cohorte: cells[3].innerText,
+                    Date: cells[4].querySelector("input").value,
+                    Période: cells[5].innerText,
+                    StatutPrésence: cells[6].querySelector("select").value,
+                    MinutesAbsence: cells[7].querySelector("input").value
+                });
+            });
+
+            fetch("https://prod-00.westus.logic.azure.com:443/workflows/TON_FLUX_ID/...", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ donnees: data })
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert("Présences enregistrées avec succès !");
+                } else {
+                    alert("Erreur lors de l'envoi des données.");
+                }
+            })
+            .catch(error => {
+                console.error("Erreur réseau :", error);
+                alert("Erreur réseau lors de l'envoi.");
+            });
+        }
+    </script>
+</body>
+</html>
