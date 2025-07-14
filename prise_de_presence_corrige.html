@@ -1,0 +1,136 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Prise de présence</title>
+    <style>
+        table, th, td { border: 1px solid black; border-collapse: collapse; padding: 5px; }
+        th { background-color: #f2f2f2; }
+        .minutes-input { display: none; width: 50px; }
+    </style>
+</head>
+<body>
+    <h2>Prise de présence</h2>
+    <label for="cohorte">Cohorte :</label>
+    <select id="cohorte" onchange="updateTable()">
+        <option value="">-- Choisir une cohorte --</option>
+        <option value="SASI-2025">SASI-2025</option>
+        <option value="SASI-2026">SASI-2026</option>
+        <option value="Électricité-2025">Électricité-2025</option>
+    </select>
+    <label for="date">Date :</label>
+    <input type="date" id="date">
+    <br><br>
+    <div id="tableContainer"></div>
+    <br>
+    <button onclick="handleSubmit()">Enregistrer les présences</button>
+
+    <script>
+        const formulaireURL = "https://forms.office.com/Pages/ResponsePage.aspx?id=uFroQ0R2NE-MUduY9W7U5ABC1eJa4ipCiZQrizC2UWVUN1JGRFpROTdTSjRXRExKUFI2MzhXU0k4OC4u";
+        const statuts = ["Présent", "Libération", "Absence motivée", "Absence non motivée", "Retard", "Départ hâtif", "Rencontre SEC"];
+        const cohortes = {
+            "SASI-2025": ["Alice Tremblay", "Bob Gagnon"],
+            "SASI-2026": ["Chloé Dubois", "David Fortin"],
+            "Électricité-2025": ["Émile Roy", "Fatima Bouchard"]
+        };
+
+        function updateTable() {
+            const cohorte = document.getElementById("cohorte").value;
+            const tableContainer = document.getElementById("tableContainer");
+            tableContainer.innerHTML = "";
+            if (!cohorte) return;
+
+            const eleves = cohortes[cohorte];
+            const nbPeriodes = (cohorte === "Électricité-2025") ? 7 : 6;
+
+            let table = "<table><tr><th>Nom</th>";
+            for (let p = 1; p <= nbPeriodes; p++) {
+                table += `<th>P${p}</th>`;
+            }
+            table += "</tr>";
+
+            eleves.forEach(nom => {
+                table += `<tr><td>${nom}</td>`;
+                for (let p = 1; p <= nbPeriodes; p++) {
+                    table += `<td>
+                        <select class="statut-select" onchange="toggleMinutes(this)">
+                            ${statuts.map(s => `<option value="${s}">${s}</option>`).join("")}
+                        </select>
+                        <input type="number" class="minutes-input" placeholder="min">
+                    </td>`;
+                }
+                table += "</tr>";
+            });
+
+            table += "</table>";
+            tableContainer.innerHTML = table;
+        }
+
+        function toggleMinutes(selectElem) {
+            const minutesInput = selectElem.nextElementSibling;
+            const statut = selectElem.value;
+            if (["Retard", "Départ hâtif", "Rencontre SEC"].includes(statut)) {
+                minutesInput.style.display = "inline-block";
+            } else {
+                minutesInput.style.display = "none";
+                minutesInput.value = "";
+            }
+        }
+
+        function handleSubmit() {
+            const date = document.getElementById("date").value;
+            const cohorte = document.getElementById("cohorte").value;
+            if (!date) {
+                alert("Veuillez sélectionner une date avant d’enregistrer les présences.");
+                return;
+            }
+
+            const table = document.querySelector("#tableContainer table");
+            if (!table) return;
+
+            const rows = table.querySelectorAll("tr");
+            for (let i = 1; i < rows.length; i++) {
+                const cells = rows[i].querySelectorAll("td");
+                const nom = cells[0].innerText.trim();
+                for (let j = 1; j < cells.length; j++) {
+                    const select = cells[j].querySelector("select");
+                    const minutes = cells[j].querySelector("input").value;
+                    const periode = "P" + j;
+                    const statut = select.value;
+
+                    const form = document.createElement("form");
+                    form.action = formulaireURL;
+                    form.method = "POST";
+                    form.target = "hidden_iframe";
+                    form.style.display = "none";
+
+                    const champs = {
+                        "Nom": nom,
+                        "Cohorte": cohorte,
+                        "Date": date,
+                        "Période": periode,
+                        "Statut présence": statut,
+                        "Minutes d’absence": minutes || ""
+                    };
+
+                    for (const [key, value] of Object.entries(champs)) {
+                        const input = document.createElement("input");
+                        input.type = "hidden";
+                        input.name = key;
+                        input.value = value;
+                        form.appendChild(input);
+                    }
+
+                    document.body.appendChild(form);
+                    form.submit();
+                    document.body.removeChild(form);
+                }
+            }
+
+            alert("Présences envoyées !");
+        }
+    </script>
+    <iframe name="hidden_iframe" style="display:none;"></iframe>
+</body>
+</html>
