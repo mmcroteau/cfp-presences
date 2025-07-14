@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Prise de présence</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    select, input[type="number"] { width: 100%; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h2>Prise de présence</h2>
+  <label for="cohorte">Cohorte :</label>
+  <select id="cohorte" onchange="chargerEleves()">
+    <option value="">-- Choisir une cohorte --</option>
+    <option value="SASI-2025">SASI-2025</option>
+    <option value="Électricité-2025">Électricité-2025</option>
+  </select>
+
+  <label for="date">Date :</label>
+  <input type="date" id="date" value="2025-07-14">
+
+  <form id="presenceForm">
+    <table id="presenceTable">
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>P1</th>
+          <th>P2</th>
+          <th>P3</th>
+          <th>P4</th>
+          <th>P5</th>
+          <th>P6</th>
+          <th class="p7">P7</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <!-- Lignes générées dynamiquement -->
+      </tbody>
+    </table>
+    <br>
+    <button type="button" onclick="enregistrerPresences()">Enregistrer les présences</button>
+  </form>
+
+  <script>
+    const elevesParCohorte = {
+      "SASI-2025": ["Alice Tremblay", "Marc Gagnon", "Julie Roy"],
+      "Électricité-2025": ["David Fortin", "Sophie Lavoie", "Éric Bouchard"]
+    };
+
+    const statuts = [
+      "Présent", "Libération", "Absence motivée", "Absence non motivée",
+      "Retard", "Départ hâtif", "Rencontre SEC"
+    ];
+
+    function chargerEleves() {
+      const cohorte = document.getElementById("cohorte").value;
+      const tableBody = document.getElementById("tableBody");
+      const p7Visible = (cohorte === "Électricité-2025");
+      document.querySelectorAll(".p7").forEach(cell => {
+        cell.style.display = p7Visible ? "" : "none";
+      });
+      tableBody.innerHTML = "";
+
+      if (!cohorte) return;
+
+      elevesParCohorte[cohorte].forEach(nom => {
+        const row = document.createElement("tr");
+        const nomCell = document.createElement("td");
+        nomCell.textContent = nom;
+        row.appendChild(nomCell);
+
+        for (let i = 1; i <= 7; i++) {
+          const cell = document.createElement("td");
+          if (i === 7 && !p7Visible) {
+            cell.style.display = "none";
+          }
+          const select = document.createElement("select");
+          select.name = `P${i}`;
+          statuts.forEach(statut => {
+            const option = document.createElement("option");
+            option.value = statut;
+            option.textContent = statut;
+            select.appendChild(option);
+          });
+          select.onchange = function() {
+            if (["Retard", "Départ hâtif", "Rencontre SEC"].includes(this.value)) {
+              minutesInput.classList.remove("hidden");
+            } else {
+              minutesInput.classList.add("hidden");
+              minutesInput.value = "";
+            }
+          };
+          const minutesInput = document.createElement("input");
+          minutesInput.type = "number";
+          minutesInput.placeholder = "min";
+          minutesInput.className = "hidden";
+          minutesInput.style.marginTop = "5px";
+          cell.appendChild(select);
+          cell.appendChild(minutesInput);
+          row.appendChild(cell);
+        }
+        tableBody.appendChild(row);
+      });
+    }
+
+    function enregistrerPresences() {
+      const cohorte = document.getElementById("cohorte").value;
+      const date = document.getElementById("date").value;
+      if (!cohorte || !date) {
+        alert("Veuillez sélectionner une cohorte et une date.");
+        return;
+      }
+
+      const rows = document.querySelectorAll("#tableBody tr");
+      rows.forEach(row => {
+        const nom = row.cells[0].textContent;
+        for (let i = 1; i < row.cells.length; i++) {
+          const cell = row.cells[i];
+          if (cell.style.display === "none") continue;
+          const periode = `P${i}`;
+          const select = cell.querySelector("select");
+          const statut = select.value;
+          const minutes = cell.querySelector("input").value;
+
+          const formData = {
+            "Nom": nom,
+            "Cohorte": cohorte,
+            "Date": date,
+            "Période": periode,
+            "Statut présence": statut,
+            "Minutes d’absence": minutes || ""
+          };
+
+          fetch("https://cfpestuaire.sharepoint.com/sites/suivi/_api/web/lists/getbytitle('Présences - Entrée')/items", {
+            method: "POST",
+            headers: {
+              "Accept": "application/json;odata=verbose",
+              "Content-Type": "application/json;odata=verbose"
+            },
+            body: JSON.stringify({
+              __metadata: { type: "SP.Data.Pr_x00e9_sences_x0020__x002d__x0020_Entr_x00e9_eListItem" },
+              Title: nom,
+              Cohorte: cohorte,
+              Date: date,
+              Période: periode,
+              Statut_x0020_pr_x00e9_sence: statut,
+              Minutes_x0020_d_x0027_absence: minutes || ""
+            })
+          }).then(response => {
+            if (!response.ok) {
+              console.error("Erreur d’envoi :", response.statusText);
+            }
+          }).catch(error => {
+            console.error("Erreur réseau :", error);
+          });
+        }
+      });
+      alert("Présences enregistrées !");
+    }
+  </script>
+</body>
+</html>
